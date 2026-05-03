@@ -1,5 +1,8 @@
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
+const express = require('express');
+const cron = require('node-cron');
+const axios = require('axios');
 const { db, dbAsync } = require('./database');
 const { setupAntiSpam } = require('./modules/antispam');
 
@@ -26,13 +29,12 @@ bot.use((ctx, next) => {
 setupAntiSpam(bot);
 
 bot.start((ctx) => {
-    ctx.reply('🛡️ *AI Group Manager Active*\n\nI am monitoring this group for:\n- Promotional images ("link in bio")\n- Long spam paragraphs\n- 3-warning kick system', { parse_mode: 'Markdown' });
+    ctx.reply('🛡️ *AI Group Manager Active*\n\nI am monitoring this group for:\n- Promotional images ("link in bio")\n- Long spam paragraphs\n- 3-warning kick system\n- Language policy (English/Hindi only)', { parse_mode: 'Markdown' });
 });
 
 // Function to start the bot
 async function startBot() {
     console.log('Waiting for database connection...');
-    // We'll just wait a second since the sqlite3 connection doesn't provide a promise-based 'ready' event easily in this setup
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     console.log('Attempting to launch bot...');
@@ -45,6 +47,30 @@ async function startBot() {
 }
 
 startBot();
+
+// ==========================================
+// RENDER.COM KEEP-ALIVE SERVER
+// ==========================================
+const app = express();
+app.get('/', (req, res) => res.send('AI Group Manager Bot is active and protecting groups!'));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Keep-alive server listening on port ${PORT}`);
+});
+
+// Self-ping cron job to keep Render awake (every 14 minutes)
+cron.schedule('*/14 * * * *', async () => {
+    const url = process.env.RENDER_EXTERNAL_URL; 
+    if (url) {
+        try {
+            await axios.get(url);
+            console.log(`[Keep-Alive] Pinged ${url} successfully.`);
+        } catch (e) {
+            console.error(`[Keep-Alive] Ping failed:`, e.message);
+        }
+    }
+});
 
 // Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
