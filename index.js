@@ -8,7 +8,7 @@ const { setupAntiSpam } = require('./modules/antispam');
 
 const token = process.env.BOT_TOKEN;
 if (!token || token === 'YOUR_TELEGRAM_BOT_TOKEN_HERE') {
-    console.error('ERROR: Please set your BOT_TOKEN in the .env file!');
+    console.error('❌ ERROR: BOT_TOKEN is missing! Please set it in your Render Environment variables.');
     process.exit(1);
 }
 
