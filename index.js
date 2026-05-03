@@ -3,7 +3,7 @@ const { Telegraf } = require('telegraf');
 const express = require('express');
 const cron = require('node-cron');
 const axios = require('axios');
-const { db, dbAsync } = require('./database');
+const { dbAsync } = require('./database');
 const { setupAntiSpam } = require('./modules/antispam');
 
 const token = process.env.BOT_TOKEN;
@@ -20,7 +20,6 @@ bot.catch((err, ctx) => {
 
 // Middleware to inject database into context
 bot.use((ctx, next) => {
-    ctx.db = db;
     ctx.dbAsync = dbAsync;
     return next();
 });

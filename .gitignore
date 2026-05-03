@@ -2,6 +2,7 @@ node_modules/
 .env
 *.sqlite
 *.sqlite-journal
+data.json
 package-lock.json
 test_token.js
 clear_webhook.js

@@ -1,43 +1,48 @@
-const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const path = require('path');
 
-// Connect to SQLite database
-const db = new sqlite3.Database(path.join(__dirname, 'bot.sqlite'), (err) => {
-    if (err) {
-        console.error('Database connection error:', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
-        initDb();
+const DB_PATH = path.join(__dirname, 'data.json');
+
+// Load or initialize data
+function loadData() {
+    try {
+        if (fs.existsSync(DB_PATH)) {
+            return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+        }
+    } catch (e) {
+        console.error('[DB] Failed to load data, starting fresh:', e.message);
     }
-});
-
-function initDb() {
-    // Basic settings for groups
-    db.run(`CREATE TABLE IF NOT EXISTS group_settings (
-        chat_id TEXT PRIMARY KEY,
-        anti_spam_enabled BOOLEAN DEFAULT 1
-    )`);
-
-    // Tracking user warnings (violations)
-    db.run(`CREATE TABLE IF NOT EXISTS warnings (
-        user_id TEXT,
-        chat_id TEXT,
-        count INTEGER DEFAULT 0,
-        PRIMARY KEY (user_id, chat_id)
-    )`);
+    return { warnings: {} };
 }
 
-// Wrapper for Promises to make async queries easier
+function saveData(data) {
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+}
+
+let data = loadData();
+
 const dbAsync = {
-    get: (query, params) => new Promise((resolve, reject) => {
-        db.get(query, params, (err, row) => err ? reject(err) : resolve(row));
-    }),
-    run: (query, params) => new Promise((resolve, reject) => {
-        db.run(query, params, function(err) {
-            if(err) reject(err);
-            else resolve(this);
-        });
-    })
+    get: async (query, params) => {
+        // Simulates: SELECT count FROM warnings WHERE user_id = ? AND chat_id = ?
+        const key = `${params[0]}_${params[1]}`;
+        const count = data.warnings[key];
+        return count !== undefined ? { count } : null;
+    },
+    run: async (query, params) => {
+        if (query.includes('INSERT') || query.includes('UPDATE')) {
+            // INSERT or UPDATE warnings
+            const key = `${params[1]}_${params[2]}`;
+            data.warnings[key] = params[0]; // count is first param
+            saveData(data);
+        } else if (query.includes('DELETE')) {
+            // DELETE FROM warnings WHERE user_id = ? AND chat_id = ?
+            const key = `${params[0]}_${params[1]}`;
+            delete data.warnings[key];
+            saveData(data);
+        }
+    }
 };
 
-module.exports = { db, dbAsync };
+console.log('Connected to JSON database.');
+
+module.exports = { dbAsync };
