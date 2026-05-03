@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.sqlite
+*.sqlite-journal
+package-lock.json
+test_token.js
+clear_webhook.js
