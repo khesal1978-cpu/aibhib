@@ -18,9 +18,22 @@ bot.catch((err, ctx) => {
     console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
 });
 
-// Middleware to inject database into context
+// Middleware to inject database + auto-delete bot replies after 11s
 bot.use((ctx, next) => {
     ctx.dbAsync = dbAsync;
+
+    // Intercept ctx.reply to auto-delete bot messages in groups
+    const originalReply = ctx.reply.bind(ctx);
+    ctx.reply = async function (...args) {
+        const msg = await originalReply(...args);
+        if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
+            setTimeout(() => {
+                ctx.telegram.deleteMessage(ctx.chat.id, msg.message_id).catch(() => {});
+            }, 11000);
+        }
+        return msg;
+    };
+
     return next();
 });
 
